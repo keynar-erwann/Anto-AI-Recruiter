@@ -3,13 +3,27 @@ import json
 from groq import Groq
 from dotenv import load_dotenv
 
-
+print("AGENT_LOGIC: Starting import...") # ADDED
 load_dotenv()
 
+print("AGENT_LOGIC: Attempting to get GROQ_API_KEY...") # ADDED
+api_key = os.getenv("GROQ_API_KEY")
+if not api_key:
+    print("AGENT_LOGIC: ERROR - GROQ_API_KEY not found!") # ADDED
+    # Optionally raise an error here if you want it to fail explicitly
+    # raise ValueError("GROQ_API_KEY environment variable not set.")
+else:
+    print("AGENT_LOGIC: GROQ_API_KEY found. Initializing Groq client...") # ADDED
 
-groq_client = Groq(
-    api_key=os.getenv("GROQ_API_KEY")
-)
+# Wrap the client initialization in a try-except block for more detailed error logging
+try:
+    groq_client = Groq(
+        api_key=api_key
+    )
+    print("AGENT_LOGIC: Groq client initialized successfully.") # ADDED
+except Exception as e:
+    print(f"AGENT_LOGIC: ERROR initializing Groq client - {e}") # ADDED
+    raise # Re-raise the exception to ensure the failure is logged
 
 def extract_json_from_string(string):
     """Safely extract JSON object from a messy string."""
@@ -35,6 +49,7 @@ def extract_json_from_string(string):
 
 def analyze_resume(job_description, resume_text):
     """Analyze a single resume against the job description."""
+    print("AGENT_LOGIC: analyze_resume function called.") # ADDED
 
     prompt = f"""
 Tu es Anto, un recruteur IA expert. À partir de la description de poste et du CV ci-dessous :
@@ -75,3 +90,5 @@ CV:
     except Exception as e:
         print(f"Erreur d'analyse: {e}")
         return None
+
+print("AGENT_LOGIC: Finished import.") # ADDED
