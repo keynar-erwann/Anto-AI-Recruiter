@@ -3,10 +3,10 @@ import json
 from groq import Groq
 from dotenv import load_dotenv
 
-# Load API keys from .env file
+
 load_dotenv()
 
-# Initialize Groq client
+
 groq_client = Groq(
     api_key=os.getenv("GROQ_API_KEY")
 )

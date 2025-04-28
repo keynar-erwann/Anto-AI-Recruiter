@@ -6,3 +6,5 @@ pymupdf
 python-docx
 pytesseract
 pillow
+groq
+python-dotenv
