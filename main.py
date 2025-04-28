@@ -4,6 +4,7 @@ from agent_logic import analyze_resume
 
 app = FastAPI()
 
+
 class ResumeAnalysisRequest(BaseModel):
     job_description: str
     resume_text: str
@@ -17,3 +18,7 @@ async def analyze_resume_endpoint(request: ResumeAnalysisRequest):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+from mangum import Mangum
+handler = Mangum(app)
