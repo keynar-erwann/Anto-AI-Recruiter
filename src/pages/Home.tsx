@@ -48,7 +48,7 @@ const Home: React.FC = () => {
       );
 
       // Use the Vercel backend URL from environment variables
-      const backendUrl = import.meta.env.VITE_BACKEND_URL;
+      const backendUrl = "https://anto-ai-recruiter.vercel.app/api/analyze";
       if (!backendUrl) {
         throw new Error("Backend URL is not configured. Set VITE_BACKEND_URL environment variable in Netlify.");
       }
