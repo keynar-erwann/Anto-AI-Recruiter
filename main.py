@@ -26,7 +26,8 @@ print("MAIN.PY: FastAPI app initialized.") # ADDED
 origins = [
     "http://localhost:5173", # Allow local development frontend (adjust port if needed)
     "http://localhost:3000", # Common alternative local port
-    "incredible-macaron-ec5264.netlify.app", # Your deployed Netlify frontend URL
+    "incredible-macaron-ec5264.netlify.app",
+    "https://anto-ai-recruiter.vercel.app", # Your deployed Netlify frontend URL
     # Add any other origins you need to allow
 ]
 
