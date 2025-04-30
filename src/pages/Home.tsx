@@ -14,84 +14,96 @@ interface Candidate {
   error?: string;
 }
 
+interface Error {
+  filename: string;
+  error: string;
+}
+
 const Home: React.FC = () => {
-  const [jobDescription, setJobDescription] = useState('');
-  const [files, setFiles] = useState<File[]>([]);
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [errors, setErrors] = useState<Candidate[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAnalyzed, setIsAnalyzed] = useState(false);
+  // ... existing code ...
 
   const handleAnalyze = async () => {
     if (!jobDescription) {
-      alert('Veuillez coller la description de l\'emploi avant de continuer.');
+      alert('Please paste the job description before continuing.');
       return;
     }
 
     if (files.length === 0) {
-      alert('Veuillez téléverser au moins un CV.');
+      alert('Please upload at least one resume.');
       return;
     }
 
     setIsLoading(true);
     setIsAnalyzed(true);
-    setCandidates([]); // Clear previous results
-    setErrors([]); // Clear previous errors
+    setCandidates([]);
+    setErrors([]);
 
     try {
-      // Prepare file content (assuming backend expects text content)
       const fileContents = await Promise.all(
         files.map(async (file) => ({
           name: file.name,
-          content: await file.text(), // Reads file as text
+          content: await file.text(),
         }))
       );
 
-      // Use the Vercel backend URL from environment variables
       const backendUrl = "https://anto-ai-recruiter.vercel.app/analyze";
       if (!backendUrl) {
-        throw new Error("Backend URL is not configured. Set VITE_BACKEND_URL environment variable in Netlify.");
+        throw new Error("Backend URL is not configured");
       }
 
-      // Fetch data from the Vercel backend
       const response = await fetch(backendUrl, {
         method: 'POST',
         headers: {
-          // Remove Supabase-specific Authorization if not needed by Vercel backend
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           job_description: jobDescription,
-          // Assuming Vercel backend now accepts 'files' like Supabase did
           files: fileContents,
         }),
+        credentials: 'include',
+        signal: AbortSignal.timeout(30000), // 30 second timeout
       });
 
       if (!response.ok) {
-        // Handle potential errors from the Vercel backend
-        const errorData = await response.text(); // Get more details on error
-        console.error("Backend error response:", errorData);
-        throw new Error(`L'analyse a échoué avec le statut ${response.status}. Réponse: ${errorData}`);
+        const errorText = await response.text();
+        let errorMessage;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.detail || errorText;
+        } catch {
+          errorMessage = errorText;
+        }
+        throw new Error(`Analysis failed with status ${response.status}. Response: ${errorMessage}`);
       }
 
-      // Assuming the backend returns an object like { candidates: [], errors: [] }
       const data = await response.json();
-      setCandidates(data.candidates || []); // Use candidates array from response
-      setErrors(data.errors || []); // Use errors array from response
+      
+      if (data.candidates && Array.isArray(data.candidates)) {
+        setCandidates(data.candidates);
+      } else {
+        console.error("Invalid response format:", data);
+        throw new Error("Invalid response format from server");
+      }
+      
+      if (data.errors && Array.isArray(data.errors)) {
+        setErrors(data.errors);
+      }
 
     } catch (error: any) {
       console.error('Error during analysis:', error);
-      // Update the alert message for better feedback
-      alert(`Une erreur est survenue lors de la communication avec le backend : ${error.message}`);
-      setCandidates([]); // Clear results on error
-      setErrors([]);
+      alert(`Error communicating with backend: ${error.message}`);
+      setCandidates([]);
+      setErrors([{
+        filename: "system",
+        error: error.message
+      }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // The rest of the component remains the same as in your provided code snippet
-  // (Introduction, JobDescriptionInput, FileUploader, ResultsSection rendering logic)
+  // ... existing code ...
+
   return (
     <main className="flex-grow px-4 sm:px-6 py-8">
       <div className="max-w-7xl mx-auto">
@@ -121,7 +133,7 @@ const Home: React.FC = () => {
               }
             `}
           >
-            {isLoading ? 'Analyse en cours...' : 'Analyser les CVs'}
+            {isLoading ? 'Analysis in progress...' : 'Analyze Resumes'}
           </button>
         </div>
 
