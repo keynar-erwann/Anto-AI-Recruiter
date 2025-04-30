@@ -15,11 +15,8 @@ try:
 except ImportError as e:
     print(f"API/INDEX.PY: ERROR importing from main - {e}")
     raise
-except Exception as e:
-    print(f"API/INDEX.PY: UNEXPECTED ERROR during import from main - {e}")
-    raise
 
-# Initialize Mangum with the imported 'app'
+# Initialize Mangum with the correct handler format
 print("API/INDEX.PY: Initializing Mangum handler...")
-handler = Mangum(app)
+handler = Mangum(app, lifespan="off")  # Add lifespan parameter
 print("API/INDEX.PY: Mangum handler initialized.")
