@@ -1,4 +1,5 @@
 import os
+import json
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -47,8 +48,16 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
             temperature=0.7
         )
 
-        return completion.choices[0].message.content
+        # Parse the response content as JSON
+        response_content = completion.choices[0].message.content
+        try:
+            # Tenter de parser la réponse en JSON
+            parsed_response = json.loads(response_content)
+            return parsed_response  # Retourner l'objet JSON parsé
+        except json.JSONDecodeError as json_error:
+            print(f"AGENT_LOGIC: Erreur de parsing JSON: {str(json_error)}")
+            return {"error": "Format de réponse invalide"}
 
     except Exception as e:
         print(f"AGENT_LOGIC: Error during analysis: {str(e)}")
-        return None
+        return {"error": f"Erreur d'analyse: {str(e)}"}
