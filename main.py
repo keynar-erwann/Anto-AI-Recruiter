@@ -24,11 +24,10 @@ print("MAIN.PY: FastAPI app initialized.") # ADDED
 # You can also use ["*"] to allow all origins during development, but be more specific for production.
 # Consider using an environment variable for the frontend URL in production.
 origins = [
-    "http://localhost:5173", # Allow local development frontend (adjust port if needed)
-    "http://localhost:3000", # Common alternative local port
-    "incredible-macaron-ec5264.netlify.app",
-    "https://anto-ai-recruiter.vercel.app", # Your deployed Netlify frontend URL
-    # Add any other origins you need to allow
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://incredible-macaron-ec5264.netlify.app",  
+    "https://anto-ai-recruiter.vercel.app"
 ]
 
 app.add_middleware(
@@ -49,10 +48,9 @@ class ResumeAnalysisRequest(BaseModel):
     # If frontend sends {job_description: string, resume_text: string} (like original main.py)
     # resume_text: str # Uncomment this if using single resume analysis endpoint
 
-# --- Adjust Endpoint if needed ---
-# This endpoint assumes the frontend sends a list of files like the Supabase function did.
-# If your Vercel backend expects one resume at a time, you'll need to adjust
-# the frontend fetch logic (Option 2 from previous steps) and this endpoint.
+@app.get("/")
+async def health_check():
+    return {"status": "active", "api_version": "1.0"}
 @app.post("/analyze")
 # async def analyze_resume_endpoint(request: ResumeAnalysisRequest): # Use this if expecting ONE resume_text
 async def analyze_multiple_resumes_endpoint(request: ResumeAnalysisRequest): # Use this if expecting list of files
