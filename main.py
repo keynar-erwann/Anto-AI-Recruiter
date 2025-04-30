@@ -26,7 +26,7 @@ print("MAIN.PY: FastAPI app initialized.") # ADDED
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
-    "incredible-macaron-ec5264.netlify.app",  
+    "https://incredible-macaron-ec5264.netlify.app",  
     "https://anto-ai-recruiter.vercel.app"
 ]
 
