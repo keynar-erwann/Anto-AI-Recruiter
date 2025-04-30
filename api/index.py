@@ -1,5 +1,4 @@
 import sys
-from mangum import Mangum
 import logging
 
 # Configure logging
@@ -16,6 +15,3 @@ try:
 except Exception as e:
     logger.error(f"Failed to import FastAPI app: {str(e)}")
     raise
-
-# Create handler instance
-handler = Mangum(app)
