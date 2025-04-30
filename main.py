@@ -89,7 +89,5 @@ async def analyze_multiple_resumes_endpoint(request: ResumeAnalysisRequest): # U
 
 # This part should ideally be in api/index.py for Vercel,
 # but if you are running locally or need it here for some reason:
-from mangum import Mangum
-handler = Mangum(app)
 
 print("MAIN.PY: Finished import and setup.") # ADDED
