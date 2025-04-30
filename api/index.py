@@ -1,22 +1,11 @@
-
-
-from mangum import Mangum
 import sys
+from mangum import Mangum
 
-print("API/INDEX.PY: Appending parent directory to sys.path...")
+# Add parent directory to Python path
 sys.path.append('..')
-print(f"API/INDEX.PY: sys.path after append: {sys.path}")
 
-try:
-    print("API/INDEX.PY: Attempting to import app from main...")
-    # Import 'app' directly without aliasing
-    from main import app
-    print("API/INDEX.PY: Successfully imported app from main.")
-except ImportError as e:
-    print(f"API/INDEX.PY: ERROR importing from main - {e}")
-    raise
+# Import the app
+from main import app
 
-# Initialize Mangum with the correct handler format
-print("API/INDEX.PY: Initializing Mangum handler...")
-handler = Mangum(app, lifespan="off")  # Add lifespan parameter
-print("API/INDEX.PY: Mangum handler initialized.")
+# Create handler instance
+handler = Mangum(app)
