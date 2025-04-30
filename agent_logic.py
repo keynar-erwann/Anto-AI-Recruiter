@@ -1,20 +1,19 @@
 import os
-from openrouter import OpenRouter
+from openai import OpenAI
 from dotenv import load_dotenv
 
-
+print("AGENT_LOGIC: Starting import...")
 load_dotenv()
 
-# Initialize OpenRouter client
-client = OpenRouter(
+# Initialize OpenAI client with OpenRouter configuration
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
     api_key=os.getenv("OPENROUTER_API_KEY"),
-    model="deepseek/deepseek-r1-zero:free"  
 )
 
 def analyze_resume(job_description: str, resume_text: str) -> dict:
     print("AGENT_LOGIC: analyze_resume function called.")
     try:
-        
         prompt = f"""
         Job Description:
         {job_description}
@@ -33,8 +32,13 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
         Format the response as a JSON object.
         """
 
-        # Make API call
-        response = client.chat.completions.create(
+        # Make API call with the new format
+        completion = client.chat.completions.create(
+            extra_headers={
+                "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
+                "X-Title": "Anto AI Recruiter",
+            },
+            model="deepseek/deepseek-r1-zero:free",
             messages=[
                 {"role": "system", "content": "You are a professional HR analyst specializing in resume evaluation."},
                 {"role": "user", "content": prompt}
@@ -43,9 +47,8 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
             temperature=0.7
         )
 
-        
-        return response.choices[0].message.content
+        return completion.choices[0].message.content
 
     except Exception as e:
-        print(f"Erreur d'analyse: {str(e)}")
+        print(f"AGENT_LOGIC: Error during analysis: {str(e)}")
         return None
