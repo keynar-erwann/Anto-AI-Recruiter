@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
+import asyncio
 
 print("MAIN.PY: Starting import...")
 
@@ -18,28 +19,7 @@ print("MAIN.PY: Initializing FastAPI app...")
 app = FastAPI()
 print("MAIN.PY: FastAPI app initialized.")
 
-origins = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://incredible-macaron-ec5264.netlify.app",  
-    "https://anto-ai-recruiter.vercel.app"
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-class ResumeAnalysisRequest(BaseModel):
-    job_description: str
-    files: list[dict[str, str]]
-
-@app.get("/")
-async def health_check():
-    return {"status": "active", "api_version": "1.0"}
+# ... existing code ...
 
 @app.post("/analyze")
 async def analyze_multiple_resumes_endpoint(request: ResumeAnalysisRequest):
@@ -47,28 +27,48 @@ async def analyze_multiple_resumes_endpoint(request: ResumeAnalysisRequest):
     results = []
     errors = []
     try:
-        for file_info in request.files:
-            filename = file_info.get("name", "Unknown Filename")
-            resume_text = file_info.get("content")
-            print(f"MAIN.PY: Analyzing file: {filename}")
-            
+        # Process files concurrently with a timeout
+        async def process_file(file_info):
             try:
+                filename = file_info.get("name", "Unknown Filename")
+                resume_text = file_info.get("content")
+                print(f"MAIN.PY: Analyzing file: {filename}")
+                
                 if resume_text:
-                    analysis_result = analyze_resume(request.job_description, resume_text)
-                    if isinstance(analysis_result, dict):
-                        if "error" in analysis_result:
-                            errors.append({"filename": filename, "error": analysis_result["error"]})
+                    # Set a timeout for each file analysis
+                    try:
+                        analysis_result = await asyncio.wait_for(
+                            asyncio.to_thread(analyze_resume, request.job_description, resume_text),
+                            timeout=45  # 45 seconds timeout per file
+                        )
+                        if isinstance(analysis_result, dict):
+                            if "error" in analysis_result:
+                                return {"error": True, "filename": filename, "message": analysis_result["error"]}
+                            else:
+                                analysis_result['filename'] = filename
+                                return {"error": False, "result": analysis_result}
                         else:
-                            analysis_result['filename'] = filename
-                            results.append(analysis_result)
-                    else:
-                        errors.append({"filename": filename, "error": "Invalid analysis result format"})
+                            return {"error": True, "filename": filename, "message": "Invalid analysis result format"}
+                    except asyncio.TimeoutError:
+                        return {"error": True, "filename": filename, "message": "Analysis timed out"}
                 else:
-                    errors.append({"filename": filename, "error": "Missing content for file"})
-            except Exception as file_error:
-                print(f"MAIN.PY: Error processing {filename}: {str(file_error)}")
-                errors.append({"filename": filename, "error": str(file_error)})
-                continue
+                    return {"error": True, "filename": filename, "message": "Missing content for file"}
+            except Exception as e:
+                return {"error": True, "filename": filename, "message": str(e)}
+
+        # Process all files concurrently
+        tasks = [process_file(file_info) for file_info in request.files]
+        file_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Collect results and errors
+        for result in file_results:
+            if isinstance(result, dict):
+                if result.get("error"):
+                    errors.append({"filename": result["filename"], "error": result["message"]})
+                else:
+                    results.append(result["result"])
+            else:
+                errors.append({"filename": "unknown", "error": str(result)})
 
         return {"candidates": results, "errors": errors}
 
@@ -78,5 +78,3 @@ async def analyze_multiple_resumes_endpoint(request: ResumeAnalysisRequest):
             status_code=500,
             content={"candidates": [], "errors": [{"filename": "system", "error": str(e)}]}
         )
-
-print("MAIN.PY: Finished import and setup.")
