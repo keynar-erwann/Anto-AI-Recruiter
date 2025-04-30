@@ -1,6 +1,6 @@
-fastapi
-python-multipart
-pydantic
-groq
-python-dotenv
-mangum
+fastapi==0.115.12
+python-multipart==0.0.20
+pydantic==2.11.4
+groq==0.23.1
+python-dotenv==1.1.0
+mangum==0.19.0
