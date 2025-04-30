@@ -1,4 +1,4 @@
-print("API/INDEX.PY: Top level execution start.")
+
 
 from mangum import Mangum
 import sys
