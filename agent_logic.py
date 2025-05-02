@@ -14,6 +14,7 @@ client = OpenAI(
 def analyze_resume(job_description: str, resume_text: str) -> dict:
     print("AGENT_LOGIC: analyze_resume function called.")
     try:
+        # Check if resume text is empty or too short
         if not resume_text or len(resume_text.strip()) < 50:
             return {
                 "score": 0,
@@ -42,55 +43,39 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
         Resume: {truncated_resume}
         """
 
-        try:
-            completion = client.chat.completions.create(
-                extra_headers={
-                    "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
-                    "X-Title": "Anto AI Recruiter",
-                },
-                model="meta-llama/llama-3.3-70b-instruct:free",  
-                messages=[
-                    {
-                        "role": "system", 
-                        "content": "You are an HR analyst. You must analyze the resume and return ONLY a valid JSON object with scores (0-100) and a brief explanation in French. The response must be a properly formatted JSON, nothing else."
-                    },
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=500,
-                temperature=0.1,  # Reduced temperature for more consistent output
-                timeout=30  # Increased timeout slightly
-            )
-            
-            # Enhanced response validation
-            if not completion or not hasattr(completion, 'choices') or not completion.choices:
-                print("AGENT_LOGIC: Invalid API response structure")
-                raise ValueError("Invalid API response structure")
-                
-            response_content = completion.choices[0].message.content.strip()
-            print(f"AGENT_LOGIC: Raw API response: {response_content}")
-            
-            if not response_content:
-                raise ValueError("Empty API response")
+        completion = client.chat.completions.create(
+            extra_headers={
+                "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
+                "X-Title": "Anto AI Recruiter",
+            },
+            model="gemma-3-27b-it:free",
+            messages=[
+                {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=500,
+            temperature=0.2,
+            timeout=25
+        )
 
-        except Exception as api_error:
-            print(f"AGENT_LOGIC: API call error: {str(api_error)}")
+        response_content = completion.choices[0].message.content.strip()
+        print(f"AGENT_LOGIC: Raw API response: {response_content}")
+        
+        # Handle empty API response
+        if not response_content:
             return {
                 "score": 0,
                 "skills": 0,
                 "experience": 0,
                 "education": 0,
-                "explanation": f"Erreur lors de l'analyse: {str(api_error)}"
+                "explanation": "Impossible d'analyser le CV en raison d'une réponse API vide."
             }
 
         try:
-            # Enhanced JSON cleaning
-            cleaned_content = response_content.strip()
-            # Remove any markdown code block indicators
-            if cleaned_content.startswith('```'):
-                cleaned_content = cleaned_content.split('```')[1]
+            # Remove any leading/trailing whitespace or special characters
+            cleaned_content = response_content.strip().strip('`').strip()
             if cleaned_content.startswith('json'):
                 cleaned_content = cleaned_content[4:].strip()
-            cleaned_content = cleaned_content.strip('`').strip()
             
             parsed_response = json.loads(cleaned_content)
             
@@ -103,14 +88,13 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                         parsed_response[field] = 0
                 return parsed_response
             else:
-                missing_fields = [field for field in required_fields if field not in parsed_response]
-                print(f"AGENT_LOGIC: Missing fields in response: {missing_fields}")
+                print("AGENT_LOGIC: Invalid JSON structure - missing required fields")
                 return {
                     "score": 0,
                     "skills": 0,
                     "experience": 0,
                     "education": 0,
-                    "explanation": "L'analyse a produit une réponse incomplète."
+                    "explanation": "L'analyse a produit un format de réponse invalide."
                 }
                 
         except json.JSONDecodeError as json_error:
@@ -121,7 +105,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                 "skills": 0,
                 "experience": 0,
                 "education": 0,
-                "explanation": "Le format de la réponse est invalide."
+                "explanation": "Impossible d'analyser les résultats de l'évaluation."
             }
 
     except Exception as e:
@@ -131,5 +115,5 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
             "skills": 0,
             "experience": 0,
             "education": 0,
-            "explanation": f"Erreur lors de l'analyse: {str(e)}"
+            "explanation": f"Erreur lors de l'analyse : {str(e)}"
         }
