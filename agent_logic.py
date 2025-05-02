@@ -43,38 +43,56 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
         Resume: {truncated_resume}
         """
 
-        completion = client.chat.completions.create(
-            extra_headers={
-                "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
-                "X-Title": "Anto AI Recruiter",
-            },
-            model="qwen/qwen3-4b:free",
-            messages=[
-                {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=500,
-            temperature=0.2,
-            timeout=25
-        )
+        try:
+            completion = client.chat.completions.create(
+                extra_headers={
+                    "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
+                    "X-Title": "Anto AI Recruiter",
+                },
+                model="mistralai/mistral-7b-instruct:free",  
+                messages=[
+                    {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500,
+                temperature=0.2,
+                timeout=25
+            )
+            
+            # Add proper null checks
+            if not completion:
+                print("AGENT_LOGIC: Empty API response")
+                raise ValueError("Empty API response")
+                
+            if not hasattr(completion, 'choices') or not completion.choices:
+                print("AGENT_LOGIC: No choices in API response")
+                raise ValueError("No choices in API response")
+                
+            response_content = completion.choices[0].message.content.strip()
+            print(f"AGENT_LOGIC: Raw API response: {response_content}")
+            
+            if not response_content:
+                print("AGENT_LOGIC: Empty content in API response")
+                raise ValueError("Empty content in API response")
 
-        response_content = completion.choices[0].message.content.strip()
-        print(f"AGENT_LOGIC: Raw API response: {response_content}")
-        
-        # Handle empty API response
-        if not response_content:
+        except Exception as api_error:
+            print(f"AGENT_LOGIC: API call error: {str(api_error)}")
             return {
                 "score": 0,
                 "skills": 0,
                 "experience": 0,
                 "education": 0,
-                "explanation": "Impossible d'analyser le CV en raison d'une réponse API vide."
+                "explanation": f"Erreur lors de l'appel API: {str(api_error)}"
             }
 
         try:
             # Remove any leading/trailing whitespace or special characters
             cleaned_content = response_content.strip().strip('`').strip()
-            if cleaned_content.startswith('json'):
+            if cleaned_content.startswith('```json'):
+                cleaned_content = cleaned_content.split('```')[1].strip()
+            elif cleaned_content.startswith('```'):
+                cleaned_content = cleaned_content.split('```')[1].strip()
+            elif cleaned_content.startswith('json'):
                 cleaned_content = cleaned_content[4:].strip()
             
             parsed_response = json.loads(cleaned_content)
