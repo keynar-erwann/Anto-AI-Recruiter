@@ -48,29 +48,29 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                     "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
                     "X-Title": "Anto AI Recruiter",
                 },
-                model="moonshotai/kimi-vl-a3b-thinking:free",  
+                model="mistralai/mistral-7b-instruct:free",  
                 messages=[
-                    {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
+                    {
+                        "role": "system", 
+                        "content": "You are an HR analyst. You must analyze the resume and return ONLY a valid JSON object with scores (0-100) and a brief explanation in French. The response must be a properly formatted JSON, nothing else."
+                    },
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=500,
-                temperature=0.2,
-                timeout=25
+                temperature=0.1,  # Reduced temperature for more consistent output
+                timeout=30  # Increased timeout slightly
             )
             
-            # Check if completion and its attributes exist
-            if completion and hasattr(completion, 'choices') and completion.choices:
-                response_content = completion.choices[0].message.content.strip()
-                print(f"AGENT_LOGIC: Raw API response: {response_content}")
-            else:
-                print("AGENT_LOGIC: Empty or invalid API response")
-                return {
-                    "score": 0,
-                    "skills": 0,
-                    "experience": 0,
-                    "education": 0,
-                    "explanation": "Erreur: Réponse API invalide ou vide."
-                }
+            # Enhanced response validation
+            if not completion or not hasattr(completion, 'choices') or not completion.choices:
+                print("AGENT_LOGIC: Invalid API response structure")
+                raise ValueError("Invalid API response structure")
+                
+            response_content = completion.choices[0].message.content.strip()
+            print(f"AGENT_LOGIC: Raw API response: {response_content}")
+            
+            if not response_content:
+                raise ValueError("Empty API response")
 
         except Exception as api_error:
             print(f"AGENT_LOGIC: API call error: {str(api_error)}")
@@ -79,23 +79,18 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                 "skills": 0,
                 "experience": 0,
                 "education": 0,
-                "explanation": f"Erreur lors de l'appel API: {str(api_error)}"
-            }
-
-        if not response_content:
-            return {
-                "score": 0,
-                "skills": 0,
-                "experience": 0,
-                "education": 0,
-                "explanation": "Impossible d'analyser le CV en raison d'une réponse API vide."
+                "explanation": f"Erreur lors de l'analyse: {str(api_error)}"
             }
 
         try:
-            # Remove any leading/trailing whitespace or special characters
-            cleaned_content = response_content.strip().strip('`').strip()
+            # Enhanced JSON cleaning
+            cleaned_content = response_content.strip()
+            # Remove any markdown code block indicators
+            if cleaned_content.startswith('```'):
+                cleaned_content = cleaned_content.split('```')[1]
             if cleaned_content.startswith('json'):
                 cleaned_content = cleaned_content[4:].strip()
+            cleaned_content = cleaned_content.strip('`').strip()
             
             parsed_response = json.loads(cleaned_content)
             
@@ -108,13 +103,14 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                         parsed_response[field] = 0
                 return parsed_response
             else:
-                print("AGENT_LOGIC: Invalid JSON structure - missing required fields")
+                missing_fields = [field for field in required_fields if field not in parsed_response]
+                print(f"AGENT_LOGIC: Missing fields in response: {missing_fields}")
                 return {
                     "score": 0,
                     "skills": 0,
                     "experience": 0,
                     "education": 0,
-                    "explanation": "L'analyse a produit un format de réponse invalide."
+                    "explanation": "L'analyse a produit une réponse incomplète."
                 }
                 
         except json.JSONDecodeError as json_error:
@@ -125,7 +121,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                 "skills": 0,
                 "experience": 0,
                 "education": 0,
-                "explanation": "Impossible d'analyser les résultats de l'évaluation."
+                "explanation": "Le format de la réponse est invalide."
             }
 
     except Exception as e:
@@ -135,5 +131,5 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
             "skills": 0,
             "experience": 0,
             "education": 0,
-            "explanation": f"Erreur lors de l'analyse : {str(e)}"
+            "explanation": f"Erreur lors de l'analyse: {str(e)}"
         }
