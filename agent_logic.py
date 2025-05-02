@@ -48,7 +48,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                     "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
                     "X-Title": "Anto AI Recruiter",
                 },
-                model="openchat/openchat-7b:free",  # Changed to OpenChat model
+                model="mistralai/mistral-small-3.1-24b-instruct:free",  
                 messages=[
                     {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
                     {"role": "user", "content": prompt}
