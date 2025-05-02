@@ -4,4 +4,8 @@ pydantic
 groq
 python-dotenv
 openai
-
+PyPDF2
+python-docx
+pytesseract
+pdf2image
+pillow
