@@ -48,7 +48,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                     "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
                     "X-Title": "Anto AI Recruiter",
                 },
-                model="meta-llama/llama-2-13b-chat:free",  
+                model="meta-llama/llama-3.3-70b-instruct:free",  
                 messages=[
                     {
                         "role": "system", 
