@@ -14,7 +14,6 @@ client = OpenAI(
 def analyze_resume(job_description: str, resume_text: str) -> dict:
     print("AGENT_LOGIC: analyze_resume function called.")
     try:
-        
         if not resume_text or len(resume_text.strip()) < 50:
             return {
                 "score": 0,
@@ -43,25 +42,46 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
         Resume: {truncated_resume}
         """
 
-        completion = client.chat.completions.create(
-            extra_headers={
-                "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
-                "X-Title": "Anto AI Recruiter",
-            },
-            model="mistralai/mistral-small-3.1-24b-instruct:free",
-            messages=[
-                {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=500,
-            temperature=0.2,
-            timeout=25
-        )
+        try:
+            completion = client.chat.completions.create(
+                extra_headers={
+                    "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
+                    "X-Title": "Anto AI Recruiter",
+                },
+                model="openchat/openchat-7b:free",  # Changed to OpenChat model
+                messages=[
+                    {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500,
+                temperature=0.2,
+                timeout=25
+            )
+            
+            # Check if completion and its attributes exist
+            if completion and hasattr(completion, 'choices') and completion.choices:
+                response_content = completion.choices[0].message.content.strip()
+                print(f"AGENT_LOGIC: Raw API response: {response_content}")
+            else:
+                print("AGENT_LOGIC: Empty or invalid API response")
+                return {
+                    "score": 0,
+                    "skills": 0,
+                    "experience": 0,
+                    "education": 0,
+                    "explanation": "Erreur: Réponse API invalide ou vide."
+                }
 
-        response_content = completion.choices[0].message.content.strip()
-        print(f"AGENT_LOGIC: Raw API response: {response_content}")
-        
-        
+        except Exception as api_error:
+            print(f"AGENT_LOGIC: API call error: {str(api_error)}")
+            return {
+                "score": 0,
+                "skills": 0,
+                "experience": 0,
+                "education": 0,
+                "explanation": f"Erreur lors de l'appel API: {str(api_error)}"
+            }
+
         if not response_content:
             return {
                 "score": 0,
@@ -72,7 +92,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
             }
 
         try:
-            
+            # Remove any leading/trailing whitespace or special characters
             cleaned_content = response_content.strip().strip('`').strip()
             if cleaned_content.startswith('json'):
                 cleaned_content = cleaned_content[4:].strip()
