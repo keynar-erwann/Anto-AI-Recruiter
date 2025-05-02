@@ -22,16 +22,14 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
         Resume:
         {resume_text}
 
-        Please analyze this resume against the job description and provide a JSON object with EXACTLY this structure:
+        Analyze this resume against the job description and return ONLY a JSON object with this EXACT structure, no other text:
         {{
-            "score": <number between 0-100>,
-            "skills": <number between 0-100>,
-            "experience": <number between 0-100>,
-            "education": <number between 0-100>,
-            "explanation": <string with analysis details>
+            "score": <integer 0-100>,
+            "skills": <integer 0-100>,
+            "experience": <integer 0-100>,
+            "education": <integer 0-100>,
+            "explanation": <brief analysis>
         }}
-
-        Return ONLY the JSON object, no additional text.
         """
 
         # Make API call with the new format
@@ -42,30 +40,37 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
             },
             model="deepseek/deepseek-r1-zero:free",
             messages=[
-                {"role": "system", "content": "You are a professional HR analyst. You must return only valid JSON matching the exact structure requested."},
+                {"role": "system", "content": "You are a professional HR analyst. You must return only a valid JSON object with the exact structure requested, no additional text or formatting."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=2000,
-            temperature=0.7
+            max_tokens=1000,
+            temperature=0.3,
+            timeout=30
         )
 
         # Parse the response content as JSON
         response_content = completion.choices[0].message.content.strip()
+        print(f"AGENT_LOGIC: Raw API response: {response_content}")
+        
         try:
             parsed_response = json.loads(response_content)
             
-            # Vérifier que la réponse a la structure attendue
+            # Validate response structure
             required_fields = ["score", "skills", "experience", "education", "explanation"]
             if all(field in parsed_response for field in required_fields):
+                # Ensure all numeric fields are integers between 0-100
+                for field in ["score", "skills", "experience", "education"]:
+                    parsed_response[field] = max(0, min(100, int(parsed_response[field])))
                 return parsed_response
             else:
-                print("AGENT_LOGIC: Réponse JSON invalide - champs manquants")
-                return {"error": "Format de réponse invalide - champs manquants"}
+                print("AGENT_LOGIC: Invalid JSON structure - missing required fields")
+                return {"error": "Invalid response format - missing required fields"}
                 
         except json.JSONDecodeError as json_error:
-            print(f"AGENT_LOGIC: Erreur de parsing JSON: {str(json_error)}")
-            return {"error": "Format de réponse invalide"}
+            print(f"AGENT_LOGIC: JSON parsing error: {str(json_error)}")
+            print(f"AGENT_LOGIC: Failed content: {response_content}")
+            return {"error": "Invalid response format"}
 
     except Exception as e:
-        print(f"AGENT_LOGIC: Error during analysis: {str(e)}")
-        return {"error": f"Erreur d'analyse: {str(e)}"}
+        print(f"AGENT_LOGIC: Analysis error: {str(e)}")
+        return {"error": f"Analysis failed: {str(e)}"}
