@@ -42,6 +42,7 @@ class ResumeAnalysisRequest(BaseModel):
 async def health_check():
     return {"status": "active", "api_version": "1.0"}
 
+from file_parser import extract_text_from_file
 @app.post("/analyze")
 async def analyze_multiple_resumes_endpoint(request: ResumeAnalysisRequest):
     print("MAIN.PY: /analyze endpoint called.")
