@@ -42,7 +42,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                 "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
                 "X-Title": "Anto AI Recruiter",
             },
-            model="gemma-3-27b-it:free",
+            model="qwen/qwq-32b:free",
             messages=[
                 {"role": "system", "content": "You are an HR analyst. Return only valid JSON matching the exact structure requested."},
                 {"role": "user", "content": prompt}
