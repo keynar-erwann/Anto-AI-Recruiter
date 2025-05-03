@@ -70,7 +70,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                         "X-Title": "Anto AI Recruiter",
                     },
                     
-                    model="deepseek/deepseek-r1:free",  
+                    model="openai/gpt-3.5-turbo",  
                     messages=[
                         {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
                         {"role": "user", "content": prompt}
