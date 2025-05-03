@@ -71,7 +71,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                         
                     },
                     
-                    model="mistral/ministral-8b",  
+                    model="google/gemini-2.0-flash-001",  
                     messages=[
                         {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
                         {"role": "user", "content": prompt}
