@@ -71,7 +71,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                         
                     },
                     
-                    model="openai/o1-pro",  
+                    model="mistral/ministral-8b",  
                     messages=[
                         {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
                         {"role": "user", "content": prompt}
