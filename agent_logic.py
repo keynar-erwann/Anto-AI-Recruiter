@@ -68,6 +68,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                     extra_headers={
                         "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
                         "X-Title": "Anto AI Recruiter",
+                        "X-OpenRouter-Provider": "openai"
                     },
                     
                     model="openai/o3",  
