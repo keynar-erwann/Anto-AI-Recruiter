@@ -3,17 +3,28 @@ import json
 from openai import OpenAI
 from dotenv import load_dotenv
 import time
+import logging
 
 print("AGENT_LOGIC: Starting import...")
 load_dotenv()
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("agent_logic")
+
+# Verify API key is loaded
+api_key = os.getenv("OPENROUTER_API_KEY")
+if not api_key:
+    logger.error("OPENROUTER_API_KEY not found in environment variables")
+    raise ValueError("Missing API key - please check your .env file")
+
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY"),
+    api_key=api_key,
 )
 
 def analyze_resume(job_description: str, resume_text: str) -> dict:
-    print("AGENT_LOGIC: analyze_resume function called.")
+    logger.info("AGENT_LOGIC: analyze_resume function called.")
     try:
         if not resume_text or len(resume_text.strip()) < 50:
             return {
@@ -42,13 +53,16 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
         Resume: {truncated_resume}
         """
 
-        print(f"AGENT_LOGIC: Sending prompt to API:\n{prompt}\n--- End of Prompt ---")
+        logger.info(f"AGENT_LOGIC: Sending prompt to API (length: {len(prompt)})")
 
         max_retries = 3
         retry_delay = 5
 
         for attempt in range(max_retries):
             try:
+                # Log API request details for debugging
+                logger.info(f"AGENT_LOGIC: Attempt {attempt+1}/{max_retries} - Calling OpenRouter API")
+                
                 completion = client.chat.completions.create(
                     extra_headers={
                         "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
@@ -61,15 +75,19 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                     ],
                     max_tokens=500,
                     temperature=0.2,
-                    timeout=25
+                    timeout=30  # Increased timeout
                 )
 
+                # Detailed response logging
+                logger.info(f"AGENT_LOGIC: Received response type: {type(completion)}")
+                
                 # Check for API error response
                 if hasattr(completion, 'error'):
                     error_msg = getattr(completion.error, 'message', 'Unknown API error')
+                    logger.error(f"AGENT_LOGIC: API returned error: {error_msg}")
                     if 'rate limit' in str(error_msg).lower():
                         if attempt < max_retries - 1:
-                            print(f"AGENT_LOGIC: Rate limit hit, attempt {attempt + 1}/{max_retries}. Waiting {retry_delay} seconds...")
+                            logger.warning(f"AGENT_LOGIC: Rate limit hit, attempt {attempt + 1}/{max_retries}. Waiting {retry_delay} seconds...")
                             time.sleep(retry_delay)
                             retry_delay *= 2  # Exponential backoff
                             continue
@@ -86,6 +104,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                     raise ValueError("Empty API response object received.")
 
                 if not hasattr(completion, 'choices') or not completion.choices:
+                    logger.error(f"AGENT_LOGIC: Invalid response structure: {completion}")
                     raise ValueError("No choices in API response")
 
                 response_content = completion.choices[0].message.content.strip()
@@ -93,15 +112,17 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                     raise ValueError("Empty content in API response choice.")
 
                 # If we get here, we have a valid response
+                logger.info("AGENT_LOGIC: Successfully received valid API response")
                 break
 
             except Exception as api_error:
+                logger.error(f"AGENT_LOGIC: API call failed: {str(api_error)}")
                 if attempt < max_retries - 1:
-                    print(f"AGENT_LOGIC: API call failed, attempt {attempt + 1}/{max_retries}. Error: {str(api_error)}")
+                    logger.warning(f"AGENT_LOGIC: Retrying in {retry_delay} seconds...")
                     time.sleep(retry_delay)
                     retry_delay *= 2
                     continue
-                print(f"AGENT_LOGIC: All API call attempts failed. Final error: {str(api_error)}")
+                logger.error(f"AGENT_LOGIC: All API call attempts failed. Final error: {str(api_error)}")
                 return {
                     "score": 0,
                     "skills": 0,
@@ -119,6 +140,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
             elif cleaned_content.startswith('json'):
                 cleaned_content = cleaned_content[4:].strip()
 
+            logger.info(f"AGENT_LOGIC: Cleaned content for parsing: {cleaned_content[:100]}...")
             parsed_response = json.loads(cleaned_content)
 
             required_fields = ["score", "skills", "experience", "education", "explanation"]
@@ -128,9 +150,11 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                         parsed_response[field] = max(0, min(100, int(float(parsed_response[field]))))
                     except (ValueError, TypeError):
                         parsed_response[field] = 0
+                logger.info("AGENT_LOGIC: Successfully parsed and validated response")
                 return parsed_response
             else:
-                print("AGENT_LOGIC: Invalid JSON structure - missing required fields")
+                missing = [f for f in required_fields if f not in parsed_response]
+                logger.error(f"AGENT_LOGIC: Invalid JSON structure - missing fields: {missing}")
                 return {
                     "score": 0,
                     "skills": 0,
@@ -140,8 +164,8 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                 }
 
         except json.JSONDecodeError as json_error:
-            print(f"AGENT_LOGIC: JSON parsing error: {str(json_error)}")
-            print(f"AGENT_LOGIC: Failed content: {response_content}")
+            logger.error(f"AGENT_LOGIC: JSON parsing error: {str(json_error)}")
+            logger.error(f"AGENT_LOGIC: Failed content: {response_content}")
             return {
                 "score": 0,
                 "skills": 0,
@@ -151,7 +175,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
             }
 
     except Exception as e:
-        print(f"AGENT_LOGIC: Analysis error: {str(e)}")
+        logger.error(f"AGENT_LOGIC: Analysis error: {str(e)}", exc_info=True)
         return {
             "score": 0,
             "skills": 0,
