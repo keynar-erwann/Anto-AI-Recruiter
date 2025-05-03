@@ -71,7 +71,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                         "X-OpenRouter-Provider": "openai"
                     },
                     
-                    model="openai/gpt-4.1-nano",  
+                    model="openai/o4-mini-high",  
                     messages=[
                         {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
                         {"role": "user", "content": prompt}
