@@ -68,10 +68,10 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                     extra_headers={
                         "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
                         "X-Title": "Anto AI Recruiter",
-                        "X-OpenRouter-Provider": "openai"
+                        
                     },
                     
-                    model="x-ai/grok-3-mini-beta",  
+                    model="openai/o1-pro",  
                     messages=[
                         {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
                         {"role": "user", "content": prompt}
