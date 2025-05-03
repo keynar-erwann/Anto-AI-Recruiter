@@ -8,11 +8,10 @@ import logging
 print("AGENT_LOGIC: Starting import...")
 load_dotenv()
 
-# Set up logging
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("agent_logic")
 
-# Verify API key is loaded
 api_key = os.getenv("OPENROUTER_API_KEY")
 if not api_key:
     logger.error("OPENROUTER_API_KEY not found in environment variables")
@@ -60,59 +59,51 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
 
         for attempt in range(max_retries):
             try:
-                # Log API request details for debugging
+                
                 logger.info(f"AGENT_LOGIC: Attempt {attempt+1}/{max_retries} - Calling OpenRouter API")
                 
+               
                 completion = client.chat.completions.create(
                     extra_headers={
                         "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
                         "X-Title": "Anto AI Recruiter",
                     },
-                    model="mistralai/mistral-7b-instruct:free",
+                    # Try a different model
+                    model="anthropic/claude-instant-v1:free",  # Alternative: "google/palm-2:free" or "openai/gpt-3.5-turbo:free"
                     messages=[
                         {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=500,
                     temperature=0.2,
-                    timeout=30  # Increased timeout
+                    timeout=30
                 )
 
-                # Detailed response logging
                 logger.info(f"AGENT_LOGIC: Received response type: {type(completion)}")
                 
-                # Check for API error response
-                if hasattr(completion, 'error'):
-                    error_msg = getattr(completion.error, 'message', 'Unknown API error')
-                    logger.error(f"AGENT_LOGIC: API returned error: {error_msg}")
-                    if 'rate limit' in str(error_msg).lower():
-                        if attempt < max_retries - 1:
-                            logger.warning(f"AGENT_LOGIC: Rate limit hit, attempt {attempt + 1}/{max_retries}. Waiting {retry_delay} seconds...")
-                            time.sleep(retry_delay)
-                            retry_delay *= 2  # Exponential backoff
-                            continue
-                        return {
-                            "score": 0,
-                            "skills": 0,
-                            "experience": 0,
-                            "education": 0,
-                            "explanation": "Service temporairement indisponible en raison de la limite de taux. Veuillez réessayer dans quelques minutes."
-                        }
-                    raise ValueError(f"API Error: {error_msg}")
-
-                if not completion:
-                    raise ValueError("Empty API response object received.")
-
+              
+                response_dict = {}
+                for attr in dir(completion):
+                    if not attr.startswith('_') and not callable(getattr(completion, attr)):
+                        try:
+                            response_dict[attr] = getattr(completion, attr)
+                        except Exception as e:
+                            response_dict[attr] = f"Error accessing: {str(e)}"
+                
+                logger.info(f"AGENT_LOGIC: Response attributes: {json.dumps(response_dict, default=str)[:500]}...")
+                
+               
                 if not hasattr(completion, 'choices') or not completion.choices:
-                    logger.error(f"AGENT_LOGIC: Invalid response structure: {completion}")
+                    logger.error(f"AGENT_LOGIC: No choices in response")
                     raise ValueError("No choices in API response")
-
+                
                 response_content = completion.choices[0].message.content.strip()
                 if not response_content:
                     raise ValueError("Empty content in API response choice.")
 
                 # If we get here, we have a valid response
                 logger.info("AGENT_LOGIC: Successfully received valid API response")
+                logger.info(f"AGENT_LOGIC: Response content: {response_content[:100]}...")
                 break
 
             except Exception as api_error:
