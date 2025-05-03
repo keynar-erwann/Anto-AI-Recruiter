@@ -14,7 +14,6 @@ client = OpenAI(
 def analyze_resume(job_description: str, resume_text: str) -> dict:
     print("AGENT_LOGIC: analyze_resume function called.")
     try:
-       
         if not resume_text or len(resume_text.strip()) < 50:
             return {
                 "score": 0,
@@ -24,7 +23,6 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                 "explanation": "Le CV semble être vide ou contient un contenu insuffisant pour l'analyse."
             }
 
-       
         max_length = 1500
         truncated_resume = resume_text[:max_length] if len(resume_text) > max_length else resume_text
         truncated_job = job_description[:max_length] if len(job_description) > max_length else job_description
@@ -43,7 +41,6 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
         Resume: {truncated_resume}
         """
 
-        
         print(f"AGENT_LOGIC: Sending prompt to API:\n{prompt}\n--- End of Prompt ---")
 
         try:
@@ -62,12 +59,10 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                 timeout=25
             )
 
-            
             if not completion:
                 print("AGENT_LOGIC: Empty API response object received.")
                 raise ValueError("Empty API response object received.")
 
-           
             if not hasattr(completion, 'choices') or not completion.choices:
                 print(f"AGENT_LOGIC: No choices in API response. Full response object: {completion}") 
                 raise ValueError("No choices in API response")
@@ -75,7 +70,6 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
             response_content = completion.choices[0].message.content.strip()
             print(f"AGENT_LOGIC: Raw API response content: {response_content}")
 
-            
             if not response_content:
                 print("AGENT_LOGIC: Empty content in API response choice.")
                 raise ValueError("Empty content in API response choice.")
@@ -91,7 +85,6 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
             }
 
         try:
-            
             cleaned_content = response_content.strip().strip('`').strip()
             if cleaned_content.startswith('```json'):
                 cleaned_content = cleaned_content.split('```')[1].strip()
