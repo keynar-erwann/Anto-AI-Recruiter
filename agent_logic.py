@@ -8,10 +8,11 @@ import logging
 print("AGENT_LOGIC: Starting import...")
 load_dotenv()
 
-
+# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("agent_logic")
 
+# Verify API key is loaded
 api_key = os.getenv("OPENROUTER_API_KEY")
 if not api_key:
     logger.error("OPENROUTER_API_KEY not found in environment variables")
@@ -59,17 +60,17 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
 
         for attempt in range(max_retries):
             try:
-                
+                # Log API request details for debugging
                 logger.info(f"AGENT_LOGIC: Attempt {attempt+1}/{max_retries} - Calling OpenRouter API")
                 
-               
+                # Try a different model or adjust parameters
                 completion = client.chat.completions.create(
                     extra_headers={
                         "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
                         "X-Title": "Anto AI Recruiter",
                     },
-                    # Try a different model
-                    model="anthropic/claude-instant-v1:free",  # Alternative: "google/palm-2:free" or "openai/gpt-3.5-turbo:free"
+                    
+                    model="qwen/qwen3-1.7b:free",  
                     messages=[
                         {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
                         {"role": "user", "content": prompt}
@@ -79,9 +80,10 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                     timeout=30
                 )
 
+                
                 logger.info(f"AGENT_LOGIC: Received response type: {type(completion)}")
                 
-              
+               
                 response_dict = {}
                 for attr in dir(completion):
                     if not attr.startswith('_') and not callable(getattr(completion, attr)):
@@ -92,7 +94,6 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                 
                 logger.info(f"AGENT_LOGIC: Response attributes: {json.dumps(response_dict, default=str)[:500]}...")
                 
-               
                 if not hasattr(completion, 'choices') or not completion.choices:
                     logger.error(f"AGENT_LOGIC: No choices in response")
                     raise ValueError("No choices in API response")
