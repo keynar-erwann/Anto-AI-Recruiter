@@ -14,7 +14,7 @@ client = OpenAI(
 def analyze_resume(job_description: str, resume_text: str) -> dict:
     print("AGENT_LOGIC: analyze_resume function called.")
     try:
-        # Check if resume text is empty or too short
+       
         if not resume_text or len(resume_text.strip()) < 50:
             return {
                 "score": 0,
@@ -24,7 +24,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                 "explanation": "Le CV semble être vide ou contient un contenu insuffisant pour l'analyse."
             }
 
-        # Truncate inputs to avoid token limits
+       
         max_length = 1500
         truncated_resume = resume_text[:max_length] if len(resume_text) > max_length else resume_text
         truncated_job = job_description[:max_length] if len(job_description) > max_length else job_description
@@ -43,13 +43,16 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
         Resume: {truncated_resume}
         """
 
+        
+        print(f"AGENT_LOGIC: Sending prompt to API:\n{prompt}\n--- End of Prompt ---")
+
         try:
             completion = client.chat.completions.create(
                 extra_headers={
                     "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
                     "X-Title": "Anto AI Recruiter",
                 },
-                model="deepseek/deepseek-chat:free",  
+                model="deepseek/deepseek-chat:free",
                 messages=[
                     {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
                     {"role": "user", "content": prompt}
@@ -58,22 +61,24 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                 temperature=0.2,
                 timeout=25
             )
+
             
-            # Add proper null checks
             if not completion:
-                print("AGENT_LOGIC: Empty API response")
-                raise ValueError("Empty API response")
-                
+                print("AGENT_LOGIC: Empty API response object received.")
+                raise ValueError("Empty API response object received.")
+
+           
             if not hasattr(completion, 'choices') or not completion.choices:
-                print("AGENT_LOGIC: No choices in API response")
+                print(f"AGENT_LOGIC: No choices in API response. Full response object: {completion}") 
                 raise ValueError("No choices in API response")
-                
+
             response_content = completion.choices[0].message.content.strip()
-            print(f"AGENT_LOGIC: Raw API response: {response_content}")
+            print(f"AGENT_LOGIC: Raw API response content: {response_content}")
+
             
             if not response_content:
-                print("AGENT_LOGIC: Empty content in API response")
-                raise ValueError("Empty content in API response")
+                print("AGENT_LOGIC: Empty content in API response choice.")
+                raise ValueError("Empty content in API response choice.")
 
         except Exception as api_error:
             print(f"AGENT_LOGIC: API call error: {str(api_error)}")
@@ -86,7 +91,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
             }
 
         try:
-            # Remove any leading/trailing whitespace or special characters
+            
             cleaned_content = response_content.strip().strip('`').strip()
             if cleaned_content.startswith('```json'):
                 cleaned_content = cleaned_content.split('```')[1].strip()
@@ -94,9 +99,9 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                 cleaned_content = cleaned_content.split('```')[1].strip()
             elif cleaned_content.startswith('json'):
                 cleaned_content = cleaned_content[4:].strip()
-            
+
             parsed_response = json.loads(cleaned_content)
-            
+
             required_fields = ["score", "skills", "experience", "education", "explanation"]
             if all(field in parsed_response for field in required_fields):
                 for field in ["score", "skills", "experience", "education"]:
@@ -114,7 +119,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                     "education": 0,
                     "explanation": "L'analyse a produit un format de réponse invalide."
                 }
-                
+
         except json.JSONDecodeError as json_error:
             print(f"AGENT_LOGIC: JSON parsing error: {str(json_error)}")
             print(f"AGENT_LOGIC: Failed content: {response_content}")
