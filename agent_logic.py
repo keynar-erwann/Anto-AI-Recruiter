@@ -52,7 +52,7 @@ def analyze_resume(job_description: str, resume_text: str) -> dict:
                     "HTTP-Referer": "https://incredible-macaron-ec5264.netlify.app",
                     "X-Title": "Anto AI Recruiter",
                 },
-                model="deepseek/deepseek-r1:free",
+                model="meta-llama/llama-3.3-70b-instruct:free",
                 messages=[
                     {"role": "system", "content": "You are an HR analyst. Return only a valid JSON object with scores and explanation in French."},
                     {"role": "user", "content": prompt}
